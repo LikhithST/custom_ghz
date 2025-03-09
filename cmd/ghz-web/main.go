@@ -8,12 +8,12 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/bojand/ghz/web/api"
 	"github.com/bojand/ghz/web/config"
 	"github.com/bojand/ghz/web/database"
 	"github.com/bojand/ghz/web/router"
+	ftime "github.com/harkaitz/go-faketime"
 )
 
 var (
@@ -67,7 +67,7 @@ func main() {
 		Version:   version,
 		BuildDate: date,
 		GOVersion: runtime.Version(),
-		StartTime: time.Now(),
+		StartTime: ftime.Now(),
 	}
 
 	server, err := router.New(db, info, conf)

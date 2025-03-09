@@ -13,6 +13,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/google/uuid"
+	ftime "github.com/harkaitz/go-faketime"
 	"github.com/jhump/protoreflect/desc"
 )
 
@@ -20,7 +21,7 @@ const charset = "abcdefghijklmnopqrstuvwxyz" +
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 var seededRand *rand.Rand = rand.New(
-	rand.NewSource(time.Now().UnixNano()))
+	rand.NewSource(ftime.Now().UnixNano()))
 
 var sprigFuncMap htmlTemplate.FuncMap = sprig.FuncMap()
 
@@ -76,7 +77,7 @@ func newCallData(
 		}
 	}
 
-	now := time.Now()
+	now := ftime.Now()
 	newUUID, _ := uuid.NewRandom()
 
 	return &CallData{
@@ -101,7 +102,7 @@ func newCallData(
 // Regenerate generates a new instance of call data from this parent instance
 // The dynamic data like timestamps and UUIDs are re-filled
 func (td *CallData) Regenerate() *CallData {
-	now := time.Now()
+	now := ftime.Now()
 	newUUID, _ := uuid.NewRandom()
 
 	return &CallData{

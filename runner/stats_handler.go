@@ -16,7 +16,6 @@ import (
 	// "reflect"
 
 	// "github.com/google/uuid"
-	"github.com/docker/docker/api/types"
 
 	// "github.com/docker/docker/client"
 
@@ -45,6 +44,7 @@ type Metadata struct {
 	StreamResponseTimeNs int64  `json:"streamResponseTimeNs,string"`
 	SubscriptionID       string `json:"subscriptionId"`
 	Description          string `json:"description"`
+	Comment              string `json:"comment"`
 }
 
 // Define the Entry struct
@@ -83,20 +83,20 @@ func (c *statsHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) cont
 }
 
 // Helper function to calculate CPU usage percentage
-func calculateCPUPercentage(stat *types.StatsJSON) float64 {
-	cpuDelta := float64(stat.CPUStats.CPUUsage.TotalUsage) - float64(stat.PreCPUStats.CPUUsage.TotalUsage)
-	systemDelta := float64(stat.CPUStats.SystemUsage) - float64(stat.PreCPUStats.SystemUsage)
-	cpuPercent := (cpuDelta / systemDelta) * float64(len(stat.CPUStats.CPUUsage.PercpuUsage)) * 100.0
-	return cpuPercent
-}
+// func calculateCPUPercentage(stat *types.StatsJSON) float64 {
+// 	cpuDelta := float64(stat.CPUStats.CPUUsage.TotalUsage) - float64(stat.PreCPUStats.CPUUsage.TotalUsage)
+// 	systemDelta := float64(stat.CPUStats.SystemUsage) - float64(stat.PreCPUStats.SystemUsage)
+// 	cpuPercent := (cpuDelta / systemDelta) * float64(len(stat.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+// 	return cpuPercent
+// }
 
 // Helper function to calculate memory usage percentage
-func calculateMemoryPercentage(stat *types.StatsJSON) float64 {
-	memUsage := float64(stat.MemoryStats.Usage)
-	memLimit := float64(stat.MemoryStats.Limit)
-	memPercent := (memUsage / memLimit) * 100.0
-	return memPercent
-}
+// func calculateMemoryPercentage(stat *types.StatsJSON) float64 {
+// 	memUsage := float64(stat.MemoryStats.Usage)
+// 	memLimit := float64(stat.MemoryStats.Limit)
+// 	memPercent := (memUsage / memLimit) * 100.0
+// 	return memPercent
+// }
 
 // HandleRPC implements per-RPC tracing and stats instrumentation.
 func (c *statsHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
@@ -170,7 +170,6 @@ func (c *statsHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 		c.lock.RLock()
 		ign = c.ignore
 		c.lock.RUnlock()
-
 		if !ign {
 			duration := rs.EndTime.Sub(rs.BeginTime)
 
@@ -194,6 +193,8 @@ func (c *statsHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 				if len(header.InMetadata) > 2 {
 					databroker_exit_timestamp, err1 := strconv.ParseInt(header.InMetadata["databroker_exit_ts"][0], 10, 64)
 					databroker_enter_timestamp, err2 := strconv.ParseInt(header.InMetadata["databroker_enter_ts"][0], 10, 64)
+
+					// fmt.Println(databroker_enter_timestamp, databroker_exit_timestamp)
 					if err1 == nil && err2 == nil {
 
 						databroker_exit_ts = time.Unix(int64(math.Abs(float64(databroker_exit_timestamp)/1000000000)), databroker_exit_timestamp%1000000000)

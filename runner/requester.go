@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	ftime "github.com/harkaitz/go-faketime"
+
 	// "reflect"
 	"github.com/bojand/ghz/load"
 	"github.com/bojand/ghz/protodesc"
@@ -189,7 +191,7 @@ func (b *Requester) Run() (*Report, error) {
 
 	// fmt.Println(string(c.metadata))
 
-	start := time.Now()
+	start := ftime.Now()
 
 	b.lock.Lock()
 	b.start = start
@@ -502,7 +504,7 @@ func (b *Requester) runWorkers(wt load.WorkerTicker, p load.Pacer) error {
 			<-workerTickerDone
 		}()
 
-		began := time.Now()
+		began := ftime.Now()
 
 		for {
 			wait, stop := p.Pace(time.Since(began), counter.Get())

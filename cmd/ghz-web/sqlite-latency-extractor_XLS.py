@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 empty_df = pd.DataFrame()
 
 # Save the empty DataFrame to an Excel file
-file_path = "/work/latency_and_mean_stats.xlsx"
+file_path = "./work/latency_and_mean_stats.xlsx"
 empty_df.to_excel(file_path, index=False)
 
 print(f"Empty Excel file created at: {file_path}")
@@ -42,7 +42,7 @@ def calculate_latency_microseconds(start_time_str, additional_time_ns, time_diff
     return latency_microseconds
 
 # Connect to the SQLite database
-conn = sqlite3.connect('/work/data/ghz.db')
+conn = sqlite3.connect('./work/data/ghz.db')
 cursor = conn.cursor()
 
 # Load data from the "details" table into a DataFrame
@@ -98,14 +98,14 @@ results_df = pd.DataFrame(results)
 grouped_results_df = results_df.groupby("request_id")
 # Save the results to a CSV file
 for request_id, group in grouped_results_df:
-    group = group[group["latency_microseconds"]>0]
+    group = group[group["latency_microseconds"]!=0]
     group["set_id"] = group["set_id"].astype(int)
     group = group.sort_values(by="set_id")
     group_avg = group.drop(columns=["request_id"]).groupby("set_id").mean().sort_values(by="set_id").reset_index()
     # empty_col_df = pd.DataFrame({'---': [None] * len(group_avg)})
     # group_df = pd.concat([group, empty_col_df, group_avg], axis=1)
     # Create a filename for the current group
-    filename = f"/work/latency_and_mean_stats.xlsx"
+    filename = f"./work/latency_and_mean_stats.xlsx"
     
     # Create Excel writer object for the current file
     with pd.ExcelWriter(filename, mode="a") as writer:

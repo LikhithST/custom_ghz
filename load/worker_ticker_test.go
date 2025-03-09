@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	ftime "github.com/harkaitz/go-faketime"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,7 +52,7 @@ func TestStepWorkerTicker(t *testing.T) {
 		assert.Equal(t, 5, tv.Delta)
 		assert.False(t, tv.Done)
 
-		start := time.Now()
+		start := ftime.Now()
 		tv = <-wct
 		end := time.Since(start)
 		assert.NotEmpty(t, tv)
@@ -97,7 +98,7 @@ func TestStepWorkerTicker(t *testing.T) {
 		assert.Equal(t, 5, tv.Delta)
 		assert.False(t, tv.Done)
 
-		start := time.Now()
+		start := ftime.Now()
 		tv = <-wct
 		end := time.Since(start)
 		assert.NotEmpty(t, tv)
@@ -145,7 +146,7 @@ func TestStepWorkerTicker(t *testing.T) {
 		assert.Equal(t, 10, tv.Delta)
 		assert.False(t, tv.Done)
 
-		start := time.Now()
+		start := ftime.Now()
 		tv = <-wct
 		end := time.Since(start)
 		assert.NotEmpty(t, tv)
@@ -191,7 +192,7 @@ func TestStepWorkerTicker(t *testing.T) {
 		assert.Equal(t, 10, tv.Delta)
 		assert.False(t, tv.Done)
 
-		start := time.Now()
+		start := ftime.Now()
 		tv = <-wct
 		end := time.Since(start)
 		assert.NotEmpty(t, tv)
@@ -246,7 +247,7 @@ func TestStepWorkerTicker(t *testing.T) {
 		assert.Equal(t, 12, tv.Delta)
 		assert.False(t, tv.Done)
 
-		start := time.Now()
+		start := ftime.Now()
 		tv = <-wct
 		end := time.Since(start)
 		assert.NotEmpty(t, tv)

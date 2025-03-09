@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # Connect to the SQLite database
-conn = sqlite3.connect('/work/data/ghz.db')
+conn = sqlite3.connect('./work/data/ghz.db')
 cursor = conn.cursor()
 
 # Load data from the "details" table into a DataFrame

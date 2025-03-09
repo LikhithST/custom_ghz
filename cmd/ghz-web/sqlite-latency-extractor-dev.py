@@ -49,6 +49,7 @@ cursor = conn.cursor()
 query = "SELECT * FROM details"
 df = pd.read_sql_query(query, conn)
 
+
 # Close the database connection
 conn.close()
 
@@ -86,6 +87,7 @@ for (set_id, request_id), group in grouped:
 
             latency = calculate_latency_microseconds(start_time_str, additional_time_ns, time_diffs_ns, additional_nanoseconds)
             
+           
             # Collect the result
             results.append({
                 'request_id': request_id,
@@ -98,7 +100,7 @@ results_df = pd.DataFrame(results)
 grouped_results_df = results_df.groupby("request_id")
 # Save the results to a CSV file
 for request_id, group in grouped_results_df:
-    group = group[group["latency_microseconds"]>0]
+    group = group[group["latency_microseconds"]!=0]
     group["set_id"] = group["set_id"].astype(int)
     group = group.sort_values(by="set_id")
     group_avg = group.drop(columns=["request_id"]).groupby("set_id").mean().sort_values(by="set_id").reset_index()

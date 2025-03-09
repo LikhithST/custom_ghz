@@ -1,13 +1,16 @@
 package runner
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
+	v1 "github.com/bojand/ghz/cmd/ghz/kuksa/val/v1"
 	"github.com/gogo/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
@@ -41,6 +44,12 @@ type Worker struct {
 	msgProvider      StreamMessageProviderFunc
 
 	streamRecv StreamRecvMsgInterceptFunc
+}
+
+type VectorClock struct {
+	Timestamp   string         `json:"timestamp"`
+	ProcessName string         `json:"process_name"`
+	Vector      map[string]int `json:"vector"`
 }
 
 func (w *Worker) runWorker() error {
@@ -169,7 +178,7 @@ func (w *Worker) makeRequest(tv TickValue) error {
 		// fmt.Println("-----------2--------------")
 		_ = w.makeClientStreamingRequest(&ctx, ctd, msgProvider)
 	} else if w.mtd.IsServerStreaming() {
-		// fmt.Println("-----------3--------------")
+		fmt.Println("-----------3--------------")
 		_ = w.makeServerStreamingRequest(&ctx, inputs[0])
 	} else {
 		// fmt.Println("-----------4--------------")
@@ -178,6 +187,141 @@ func (w *Worker) makeRequest(tv TickValue) error {
 
 	return err
 }
+
+// func write_to_file() {
+// 	fileName := "output.txt"
+// 	content := "Hello, this is a test content written to a file using Go!"
+
+// 	// Create or open the file
+// 	file, err := os.Create(fileName)
+// 	if err != nil {
+// 		fmt.Println("Error creating file:", err)
+// 		return
+// 	}
+// 	defer func() {
+// 		if err := file.Close(); err != nil {
+// 			fmt.Println("Error closing file:", err)
+// 		}
+// 	}()
+
+// 	// Write content to the file
+// 	_, err = file.WriteString(content)
+// 	if err != nil {
+// 		fmt.Println("Error writing to file:", err)
+// 		return
+// 	}
+
+// 	fmt.Println("File written successfully!")
+// }
+
+// func readLastLine(fileName string) (string, error) {
+// 	file, err := os.Open(fileName)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	defer file.Close()
+
+// 	var lastLine string
+// 	scanner := bufio.NewScanner(file)
+// 	for scanner.Scan() {
+// 		lastLine = scanner.Text()
+// 	}
+
+// 	if err := scanner.Err(); err != nil {
+// 		return "", err
+// 	}
+
+// 	return lastLine, nil
+// }
+
+func readLastVectorClock(fileName string) (VectorClock, error) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		return VectorClock{}, err
+	}
+	defer file.Close()
+
+	var lastLine string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lastLine = scanner.Text()
+	}
+
+	if err := scanner.Err(); err != nil {
+		return VectorClock{}, err
+	}
+
+	var vectorClock VectorClock
+	if err := json.Unmarshal([]byte(lastLine), &vectorClock); err != nil {
+		return VectorClock{}, err
+	}
+
+	return vectorClock, nil
+}
+
+func appendVectorClock(fileName string, vectorClock VectorClock) error {
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	jsonData, err := json.Marshal(vectorClock)
+	if err != nil {
+		return err
+	}
+
+	_, err = file.WriteString(string(jsonData) + "\n")
+	return err
+}
+
+func metadataToMap(md *metadata.MD) map[string][]string {
+	metadataMap := make(map[string][]string)
+	if md == nil {
+		return metadataMap
+	}
+
+	for key, values := range *md {
+		metadataMap[key] = values
+	}
+
+	return metadataMap
+}
+
+// func updateVectorClockInMetadata(reqMD map[string]string, vectorClock map[string]int) {
+// 	// Convert vector clock to a string (you could use JSON or other formats as needed)
+// 	// For simplicity, we'll use a comma-separated key-value format here.
+// 	vectorClockStr := ""
+// 	for node, timestamp := range vectorClock {
+// 		vectorClockStr += fmt.Sprintf("%s:%d,", node, timestamp)
+// 	}
+
+// 	// Remove trailing comma
+// 	if len(vectorClockStr) > 0 {
+// 		vectorClockStr = vectorClockStr[:len(vectorClockStr)-1]
+// 	}
+
+// 	// Add vector clock string to request metadata (reqMD)
+// 	reqMD["vector_clock"] = vectorClockStr
+// }
+
+// // Function to set fields dynamically
+// func setFields(dynMsg *dynamicpb.Message, data map[string]interface{}) error {
+// 	for key, value := range data {
+// 		fieldDesc := dynMsg.Descriptor().Fields().ByName(protoreflect.Name(key))
+// 		if fieldDesc == nil {
+// 			continue
+// 		}
+// 		dynMsg.Set(fieldDesc, protoreflect.ValueOf(value))
+// 	}
+// 	return nil
+// }
+
+// // Dummy function to simulate loading a FileDescriptorSet
+// func getProtoDescriptorSet() []byte {
+// 	// Normally, this reads from a `.protoset` file
+// 	return []byte{} // Replace with actual descriptor binary
+// }
 
 func (w *Worker) makeUnaryRequest(ctx *context.Context, reqMD *metadata.MD, input *dynamic.Message) error {
 	var res proto.Message
@@ -190,15 +334,91 @@ func (w *Worker) makeUnaryRequest(ctx *context.Context, reqMD *metadata.MD, inpu
 		callOptions = append(callOptions, grpc.UseCompressor(gzip.Name))
 	}
 	var data Response
+	reqMD_map := metadataToMap(reqMD)
+	fileName := "vector_clock.txt"
+	processName := reqMD_map["request_id"][0]
 	payload_dataByte, _ := json.Marshal(input)
 	payload_dataRaw := json.RawMessage(string(payload_dataByte))
 	_ = json.Unmarshal(payload_dataRaw, &data)
+
+	// fmt.Printf("%+v\n", data)
+	// msg := dynamicpb.NewMessage(input.GetMessageDescriptor().UnwrapMessage())
+	// fmt.Printf("----_---%v\n", msg)
+
+	// fmt.Printf("%v\n", reqMD_map["request_id"][0])
+	// println(reqMD_map["request_id"][0])
+
 	if len(data.Updates) > 0 {
 
 		*ctx = context.WithValue(*ctx, "set_id", data.Updates[0].Entry.Metadata.Description)
 	}
 
-	res, resErr = w.stub.InvokeRpc(*ctx, w.mtd, input, callOptions...)
+	// write_to_file()
+	// read_txt, _ := readLastLine("output.txt")
+	// println(read_txt)
+
+	lastVector, err := readLastVectorClock(fileName)
+	if err != nil {
+		lastVector = VectorClock{
+			Timestamp:   time.Now().Format(time.RFC3339),
+			ProcessName: processName,
+			Vector:      make(map[string]int),
+		}
+	}
+	// Update vector clock
+	lastVector.Timestamp = time.Now().Format(time.RFC3339)
+	lastVector.ProcessName = processName
+	lastVector.Vector[processName]++
+
+	if err := appendVectorClock(fileName, lastVector); err != nil {
+		fmt.Println("Error writing to file:", err)
+		return resErr
+	}
+
+	lastVector_str, _ := json.Marshal(lastVector)
+
+	data.Updates[0].Entry.Metadata.Comment = string(lastVector_str)
+	// res_data, err := json.Marshal(data)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// new_input :=
+
+	// 	fmt.Println("Updated vector clockk:", lastVector)
+	// fmt.Printf("--%+v\n", input)
+	// fmt.Printf("-data-%+v\n", data)
+	// start
+
+	// end
+	// create a proto.Message to hold the result
+	new_input := &v1.SetRequest{}
+	// fmt.Printf("new_input: %+v\n", new_input.Updates)
+
+	// Map to struct
+	// marshal dynamic.Message to proto
+	data_byte, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	json.Unmarshal(data_byte, new_input)
+
+	// fmt.Println("------", new_input, "-------") // Now it's used
+	// err = proto.Unmarshal(data_byte, new_input)
+	// if err != nil {
+	// 	println("error line 387", err)
+	// 	return nil
+	// }
+
+	// fmt.Println(new_input)
+	// println("done")
+	// a, _ := json.Marshal(new_input)
+	// fmt.Printf(string(a))
+	// r := json.RawMessage(string(a))
+	// _ = json.Unmarshal(r, &data)
+
+	res, resErr = w.stub.InvokeRpc(*ctx, w.mtd, new_input, callOptions...)
 
 	if w.config.hasLog {
 		inputData, _ := input.MarshalJSON()
@@ -388,8 +608,44 @@ func (w *Worker) makeServerStreamingRequest(ctx *context.Context, input *dynamic
 		}
 
 		var res proto.Message
-		res, err = str.RecvMsg()
+		fileName := "vector_clock.txt"
 
+		res, err = str.RecvMsg()
+		func(res proto.Message) {
+			res_byte, err := json.Marshal(res)
+			if err != nil {
+				fmt.Println("error:", err)
+				return
+			}
+
+			var res_data Response
+			res_rawdatabyte := json.RawMessage(res_byte)
+			_ = json.Unmarshal(res_rawdatabyte, &res_data)
+			if len(res_data.Updates) != 0 {
+				processName := res_data.Updates[0].Entry.Metadata.SubscriptionID
+				lastVector, err := readLastVectorClock(fileName)
+				if err != nil {
+					lastVector = VectorClock{
+						Timestamp:   time.Now().Format(time.RFC3339),
+						ProcessName: processName,
+						Vector:      make(map[string]int),
+					}
+				}
+				// Update vector clock
+				lastVector.Timestamp = time.Now().Format(time.RFC3339)
+				lastVector.ProcessName = processName
+				lastVector.Vector[processName]++
+
+				if err := appendVectorClock(fileName, lastVector); err != nil {
+					fmt.Println("Error writing to file:", err)
+					return
+				}
+			}
+
+			return
+		}(res)
+
+		fmt.Printf("%v", res)
 		if w.config.hasLog {
 			w.config.log.Debugw("Receive message", "workerID", w.workerID, "call type", "server-streaming",
 				"call", w.mtd.GetFullyQualifiedName(),
