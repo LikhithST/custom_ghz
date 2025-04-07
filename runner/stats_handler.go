@@ -13,6 +13,7 @@ import (
 	// "fmt"
 
 	"google.golang.org/grpc/metadata"
+
 	// "reflect"
 
 	// "github.com/google/uuid"
@@ -59,6 +60,26 @@ type Update struct {
 	Entry  Entry    `json:"entry"`
 	Fields []string `json:"fields"`
 }
+
+type Field int32
+
+const (
+	Field_FIELD_UNSPECIFIED                Field = 0  // "*" i.e. everything
+	Field_FIELD_PATH                       Field = 1  // path
+	Field_FIELD_VALUE                      Field = 2  // value
+	Field_FIELD_ACTUATOR_TARGET            Field = 3  // actuator_target
+	Field_FIELD_METADATA                   Field = 10 // metadata.*
+	Field_FIELD_METADATA_DATA_TYPE         Field = 11 // metadata.data_type
+	Field_FIELD_METADATA_DESCRIPTION       Field = 12 // metadata.description
+	Field_FIELD_METADATA_ENTRY_TYPE        Field = 13 // metadata.entry_type
+	Field_FIELD_METADATA_COMMENT           Field = 14 // metadata.comment
+	Field_FIELD_METADATA_DEPRECATION       Field = 15 // metadata.deprecation
+	Field_FIELD_METADATA_UNIT              Field = 16 // metadata.unit
+	Field_FIELD_METADATA_VALUE_RESTRICTION Field = 17 // metadata.value_restriction.*
+	Field_FIELD_METADATA_ACTUATOR          Field = 20 // metadata.actuator.*
+	Field_FIELD_METADATA_SENSOR            Field = 30 // metadata.sensor.*
+	Field_FIELD_METADATA_ATTRIBUTE         Field = 40 // metadata.attribute.*
+)
 
 // Define the Response struct
 type Response struct {

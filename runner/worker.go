@@ -8,18 +8,22 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	v1 "github.com/bojand/ghz/cmd/ghz/kuksa/val/v1"
 	"github.com/gogo/protobuf/proto"
+	"github.com/google/uuid"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
 	"go.uber.org/multierr"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // TickValue is the tick value
@@ -178,7 +182,7 @@ func (w *Worker) makeRequest(tv TickValue) error {
 		// fmt.Println("-----------2--------------")
 		_ = w.makeClientStreamingRequest(&ctx, ctd, msgProvider)
 	} else if w.mtd.IsServerStreaming() {
-		fmt.Println("-----------3--------------")
+		// fmt.Println("-----------3--------------")
 		_ = w.makeServerStreamingRequest(&ctx, inputs[0])
 	} else {
 		// fmt.Println("-----------4--------------")
@@ -266,6 +270,12 @@ func appendVectorClock(fileName string, vectorClock VectorClock) error {
 	}
 	defer file.Close()
 
+	// Apply an exclusive lock to prevent concurrent writes
+	if err := unix.Flock(int(file.Fd()), unix.LOCK_EX); err != nil {
+		return err
+	}
+	defer unix.Flock(int(file.Fd()), unix.LOCK_UN) // Unlock when done
+
 	jsonData, err := json.Marshal(vectorClock)
 	if err != nil {
 		return err
@@ -286,6 +296,25 @@ func metadataToMap(md *metadata.MD) map[string][]string {
 	}
 
 	return metadataMap
+}
+
+// mergeVectorClocks compares two maps and retains the maximum values for each key.
+func mergeVectorClocks(vc1, vc2 map[string]int) map[string]int {
+	merged := make(map[string]int)
+
+	// Iterate over first map and store values
+	for k, v := range vc1 {
+		merged[k] = v
+	}
+
+	// Iterate over second map, keeping the maximum value for each key
+	for k, v := range vc2 {
+		if existingVal, found := merged[k]; !found || v > existingVal {
+			merged[k] = v
+		}
+	}
+
+	return merged
 }
 
 // func updateVectorClockInMetadata(reqMD map[string]string, vectorClock map[string]int) {
@@ -334,23 +363,28 @@ func (w *Worker) makeUnaryRequest(ctx *context.Context, reqMD *metadata.MD, inpu
 		callOptions = append(callOptions, grpc.UseCompressor(gzip.Name))
 	}
 	var data Response
+	neww_input := &v1.SetRequest{}
 	reqMD_map := metadataToMap(reqMD)
-	fileName := "vector_clock.txt"
-	processName := reqMD_map["request_id"][0]
-	payload_dataByte, _ := json.Marshal(input)
-	payload_dataRaw := json.RawMessage(string(payload_dataByte))
-	_ = json.Unmarshal(payload_dataRaw, &data)
+	fileName := "vector_clock_publisher.txt"
+	processName := strings.Split(uuid.New().String(), "-")[0] + "_publisher_" + reqMD_map["request_id"][0] //reqMD_map["request_id"][0]
+	err := input.ConvertTo(neww_input)
+	if err != nil {
+		return err
+	}
+	payload_dataByte, _ := protojson.Marshal(neww_input)
+	// payload_dataRaw := json.RawMessage(string(payload_dataByte))
+	_ = json.Unmarshal([]byte(string(payload_dataByte)), &data)
 
-	// fmt.Printf("%+v\n", data)
+	// fmt.Printf("data--- %+v\n", neww_input.Updates[0].Entry.Metadata.GetDescription())
+	// fmt.Printf("payload_dataByte--- %+v\n", string(payload_dataByte))
 	// msg := dynamicpb.NewMessage(input.GetMessageDescriptor().UnwrapMessage())
 	// fmt.Printf("----_---%v\n", msg)
-
 	// fmt.Printf("%v\n", reqMD_map["request_id"][0])
 	// println(reqMD_map["request_id"][0])
 
 	if len(data.Updates) > 0 {
 
-		*ctx = context.WithValue(*ctx, "set_id", data.Updates[0].Entry.Metadata.Description)
+		*ctx = context.WithValue(*ctx, "set_id", neww_input.Updates[0].Entry.Metadata.GetDescription())
 	}
 
 	// write_to_file()
@@ -376,8 +410,11 @@ func (w *Worker) makeUnaryRequest(ctx *context.Context, reqMD *metadata.MD, inpu
 	}
 
 	lastVector_str, _ := json.Marshal(lastVector)
-
-	data.Updates[0].Entry.Metadata.Comment = string(lastVector_str)
+	lastVector_ptr := string(lastVector_str)
+	// fmt.Println("---input---", input, "-------") // Now it's used
+	// fmt.Println("---data---", data, "-------")   // Now it's used
+	neww_input.Updates[0].Entry.Metadata.Description = &lastVector_ptr
+	// data.Updates[0].Entry.Metadata.Description = "18"
 	// res_data, err := json.Marshal(data)
 	// if err != nil {
 	// 	return err
@@ -392,19 +429,30 @@ func (w *Worker) makeUnaryRequest(ctx *context.Context, reqMD *metadata.MD, inpu
 
 	// end
 	// create a proto.Message to hold the result
-	new_input := &v1.SetRequest{}
+	// new_input := &v1.SetRequest{}
 	// fmt.Printf("new_input: %+v\n", new_input.Updates)
 
 	// Map to struct
 	// marshal dynamic.Message to proto
-	data_byte, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
+	// data.Updates[0].Entry.Value.Timestamp = timestamppb.Now()
+	// data_byte, err := json.Marshal(data)
+	// if err != nil {
+	// 	return err
+	// }
 
-	json.Unmarshal(data_byte, new_input)
+	// data_raw_byte := json.RawMessage(data_byte)
+	// fmt.Println("------", input, "-------")             // Now it's used
+	// fmt.Println("------", data_byte, "-------")         // Now it's used
+	// fmt.Println("------", string(data_byte), "-------") // Now it's used
 
-	// fmt.Println("------", new_input, "-------") // Now it's used
+	// if err := json.Unmarshal(data_raw_byte, new_input); err != nil {
+	// 	fmt.Printf("\n new_input %v", new_input)
+	// 	log.Fatalf("Unmarshal error: %v", err)
+	// }
+
+	// fmt.Println("------", string(data_byte), "-------") // Now it's used
+	// fmt.Println("------", new_input, "-------")         // Now it's used
+	// fmt.Println("------", input, "-------")             // Now it's used
 	// err = proto.Unmarshal(data_byte, new_input)
 	// if err != nil {
 	// 	println("error line 387", err)
@@ -418,7 +466,7 @@ func (w *Worker) makeUnaryRequest(ctx *context.Context, reqMD *metadata.MD, inpu
 	// r := json.RawMessage(string(a))
 	// _ = json.Unmarshal(r, &data)
 
-	res, resErr = w.stub.InvokeRpc(*ctx, w.mtd, new_input, callOptions...)
+	res, resErr = w.stub.InvokeRpc(*ctx, w.mtd, neww_input, callOptions...)
 
 	if w.config.hasLog {
 		inputData, _ := input.MarshalJSON()
@@ -608,44 +656,57 @@ func (w *Worker) makeServerStreamingRequest(ctx *context.Context, input *dynamic
 		}
 
 		var res proto.Message
-		fileName := "vector_clock.txt"
 
 		res, err = str.RecvMsg()
-		func(res proto.Message) {
-			res_byte, err := json.Marshal(res)
-			if err != nil {
-				fmt.Println("error:", err)
-				return
-			}
-
-			var res_data Response
-			res_rawdatabyte := json.RawMessage(res_byte)
-			_ = json.Unmarshal(res_rawdatabyte, &res_data)
-			if len(res_data.Updates) != 0 {
-				processName := res_data.Updates[0].Entry.Metadata.SubscriptionID
-				lastVector, err := readLastVectorClock(fileName)
+		if res != nil {
+			// fmt.Printf("%+v", res)
+			func(res proto.Message) {
+				res_byte, err := json.Marshal(res)
 				if err != nil {
-					lastVector = VectorClock{
-						Timestamp:   time.Now().Format(time.RFC3339),
-						ProcessName: processName,
-						Vector:      make(map[string]int),
-					}
-				}
-				// Update vector clock
-				lastVector.Timestamp = time.Now().Format(time.RFC3339)
-				lastVector.ProcessName = processName
-				lastVector.Vector[processName]++
-
-				if err := appendVectorClock(fileName, lastVector); err != nil {
-					fmt.Println("Error writing to file:", err)
+					fmt.Println("error:", err)
 					return
 				}
-			}
 
-			return
-		}(res)
+				// res_data := &v1.SubscribeResponse{}
+				var res_data Response
+				var recieved_vc VectorClock
+				res_rawdatabyte := json.RawMessage(res_byte)
+				_ = json.Unmarshal(res_rawdatabyte, &res_data)
+				if len(res_data.Updates) > 0 {
+					processName := res_data.Updates[0].Entry.Metadata.SubscriptionID
+					fileName := "vector_clock_" + processName + "_subscriber.txt"
 
-		fmt.Printf("%v", res)
+					jsonStr := res_data.Updates[0].Entry.Metadata.Description
+					err := json.Unmarshal([]byte(jsonStr), &recieved_vc)
+					if err != nil {
+						fmt.Println("error:", err)
+						return
+					}
+					// fmt.Printf("----%+v\n", res_data)
+					lastVector, err := readLastVectorClock(fileName)
+					if err != nil {
+						lastVector = VectorClock{
+							Timestamp:   time.Now().Format(time.RFC3339),
+							ProcessName: processName,
+							Vector:      make(map[string]int),
+						}
+					}
+					// Update vector clock
+					lastVector.Timestamp = time.Now().Format(time.RFC3339)
+					lastVector.ProcessName = processName
+					lastVector.Vector[processName]++
+
+					lastVector.Vector = mergeVectorClocks(lastVector.Vector, recieved_vc.Vector)
+
+					if err := appendVectorClock(fileName, lastVector); err != nil {
+						fmt.Println("Error writing to file:", err)
+						return
+					}
+				}
+			}(res)
+		}
+
+		// fmt.Printf("%v", res)
 		if w.config.hasLog {
 			w.config.log.Debugw("Receive message", "workerID", w.workerID, "call type", "server-streaming",
 				"call", w.mtd.GetFullyQualifiedName(),

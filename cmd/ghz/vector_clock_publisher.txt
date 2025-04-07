@@ -1,0 +1,6 @@
+{"timestamp":"2025-04-06T20:58:49+02:00","process_name":"b152b35f_publisher_p3","vector":{"b152b35f_publisher_p3":1}}
+{"timestamp":"2025-04-06T21:28:46+02:00","process_name":"ad149c9b_publisher_p3","vector":{"ad149c9b_publisher_p3":1,"b152b35f_publisher_p3":1}}
+{"timestamp":"2025-04-06T21:32:05+02:00","process_name":"f233a5a1_publisher_p3","vector":{"ad149c9b_publisher_p3":1,"b152b35f_publisher_p3":1,"f233a5a1_publisher_p3":1}}
+{"timestamp":"2025-04-06T21:34:22+02:00","process_name":"af907887_publisher_p3","vector":{"ad149c9b_publisher_p3":1,"af907887_publisher_p3":1,"b152b35f_publisher_p3":1,"f233a5a1_publisher_p3":1}}
+{"timestamp":"2025-04-06T21:34:44+02:00","process_name":"535c03b8_publisher_p3","vector":{"535c03b8_publisher_p3":1,"ad149c9b_publisher_p3":1,"af907887_publisher_p3":1,"b152b35f_publisher_p3":1,"f233a5a1_publisher_p3":1}}
+{"timestamp":"2025-04-06T21:37:51+02:00","process_name":"1448349c_publisher_p3","vector":{"1448349c_publisher_p3":1,"535c03b8_publisher_p3":1,"ad149c9b_publisher_p3":1,"af907887_publisher_p3":1,"b152b35f_publisher_p3":1,"f233a5a1_publisher_p3":1}}

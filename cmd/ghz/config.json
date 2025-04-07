@@ -1,9 +1,9 @@
 {
     "proto": "../proto/kuksa/val/v1/val.proto",
     "call": "kuksa.val.v1.VAL.Set",
-    "total": 10,
+    "total": 1,
     "rps": 1000,
-    "metadata" : {"trace_id":"{{.RequestNumber}}", "timestamp":"{{.TimestampUnix}}", "request_id":"50sub300pub"},
+    "metadata" : {"trace_id":"{{.RequestNumber}}", "timestamp":"{{.TimestampUnix}}", "request_id":"p3"},
     "data": {
         "updates": [
             {
@@ -14,7 +14,8 @@
                         "float": 112
                     },
                     "metadata": {
-                        "description":"{{.RequestNumber}}"
+                        "description":"{{.RequestNumber}}",
+                        "comment":"hi"
                     }
                 },
                 "fields": ["2", "12"]
@@ -24,5 +25,5 @@
     "import-paths": [
         "./"
     ],
-    "host": "0.0.0.0:55555"
+    "host": "127.0.0.1:55555"
 }
