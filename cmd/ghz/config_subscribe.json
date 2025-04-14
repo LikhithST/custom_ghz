@@ -1,10 +1,10 @@
 {
     "proto":  "../proto/kuksa/val/v1/val.proto",
     "call": "kuksa.val.v1.VAL.Subscribe",
-    "total": 1,
+    "total": 20,
     "concurrency":2,
-    "timeout":"20s",
-    "metadata" : {"trace_id":"{{.RequestNumber}}", "timestamp":"{{.TimestampUnix}}", "request_id":"50sub300pub"},
+    "timeout":"30s",
+    "metadata" : {"trace_id":"{{.RequestNumber}}", "timestamp":"{{.TimestampUnix}}", "request_id":"p3"},
     "data": {
         "entries": [
             {

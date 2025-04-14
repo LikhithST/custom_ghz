@@ -118,6 +118,9 @@ func (w *Worker) makeRequest(tv TickValue) error {
 		ctx = context.WithValue(ctx, "metadata", (*metadata)["request_id"])
 		// ctx = context.WithValue(ctx, "set_id", data.Updates[0].Entry.Metadata.Description)
 		ctx, cancel = context.WithTimeout(ctx, w.config.timeout)
+		// ctx, cancel = context.WithTimeout(ctx, time.Duration(10000000000))
+		// fmt.Printf("%#v", w.config.timeout)
+		// println("worker.go line 120")
 	} else {
 		ctx, cancel = context.WithCancel(ctx)
 	}
@@ -677,9 +680,10 @@ func (w *Worker) makeServerStreamingRequest(ctx *context.Context, input *dynamic
 					fileName := "vector_clock_" + processName + "_subscriber.txt"
 
 					jsonStr := res_data.Updates[0].Entry.Metadata.Description
+					// fmt.Printf("--%#v", jsonStr)
 					err := json.Unmarshal([]byte(jsonStr), &recieved_vc)
 					if err != nil {
-						fmt.Println("error:", err)
+						fmt.Println("---error:", err)
 						return
 					}
 					// fmt.Printf("----%+v\n", res_data)

@@ -297,6 +297,7 @@ func main() {
 
 		args := os.Args[1:]
 		if len(args) > 1 {
+			// fmt.Println("yes inside")
 			var cmdCfg runner.Config
 			err = createConfigFromArgs(&cmdCfg)
 			kingpin.FatalIfError(err, "")
@@ -313,6 +314,7 @@ func main() {
 	var logger *zap.SugaredLogger
 
 	options := []runner.Option{runner.WithConfig(&cfg)}
+	// fmt.Printf("\n----\n %+v \n-------\n", options)
 	if len(cfg.Debug) > 0 {
 		var err error
 		logger, err = createLogger(cfg.Debug)
@@ -593,6 +595,7 @@ func mergeConfig(dest *runner.Config, src *runner.Config) error {
 	}
 
 	if isTSet {
+		// bookmark
 		dest.Timeout = src.Timeout
 	}
 

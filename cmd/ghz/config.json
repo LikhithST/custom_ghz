@@ -1,7 +1,7 @@
 {
     "proto": "../proto/kuksa/val/v1/val.proto",
     "call": "kuksa.val.v1.VAL.Set",
-    "total": 1,
+    "total": 10,
     "rps": 1000,
     "metadata" : {"trace_id":"{{.RequestNumber}}", "timestamp":"{{.TimestampUnix}}", "request_id":"p3"},
     "data": {

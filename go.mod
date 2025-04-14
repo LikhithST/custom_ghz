@@ -220,6 +220,6 @@ require (
 	mvdan.cc/unparam v0.0.0-20211214103731-d0ef000c54e5 // indirect
 )
 
-replace google.golang.org/grpc => /mnt/c/Users/tolik/Documents/Research_Project/grpc-go
+replace google.golang.org/grpc => ./grpc-go
 
-replace github.com/harkaitz/go-faketime => /mnt/c/Users/tolik/Documents/Research_Project/go-faketime
+replace github.com/harkaitz/go-faketime => ./go-faketime

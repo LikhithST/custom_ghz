@@ -149,6 +149,8 @@ func LoadConfig(p string, c *Config) error {
 		return err
 	}
 
+	// fmt.Printf("\n %#v \n", c)
+
 	if c.Data != nil {
 		ext := path.Ext(p)
 		if strings.EqualFold(ext, ".yaml") || strings.EqualFold(ext, ".yml") {

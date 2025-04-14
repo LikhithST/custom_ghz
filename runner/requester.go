@@ -102,10 +102,13 @@ func NewRequester(c *RunConfig) (*Requester, error) {
 
 	// fmt.Printf("%+v",c)
 	if c.proto != "" {
+		// println("proto")
 		mtd, err = protodesc.GetMethodDescFromProto(c.call, c.proto, c.importPaths)
 	} else if c.protoset != "" {
+		// println("protoset")
 		mtd, err = protodesc.GetMethodDescFromProtoSet(c.call, c.protoset)
 	} else if c.protosetBinary != nil {
+		// println("protosetBinary")
 		mtd, err = protodesc.GetMethodDescFromProtoSetBinary(c.call, c.protosetBinary)
 	} else {
 		// use reflection to get method descriptor
